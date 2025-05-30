@@ -6,9 +6,9 @@ const axios = require('axios');
 admin.initializeApp();
 
 // Configuração do PIX
-const PIX_KEY = 'troopsofarchangel@gmail.com'; // Sua chave PIX (CPF, email ou telefone)
-const PIX_BENEFICIARY = 'Will_trooper'; // Nome do beneficiário
-const PIX_BANK = 'PicPay'; // Nome do banco
+const PIX_KEY = 'xxxxxxxxxxxxxxxxxxxxxxxxxxx'; // Sua chave PIX (CPF, email ou telefone)
+const PIX_BENEFICIARY = 'xxxxxxxxxxxxxxxx'; // Nome do beneficiário
+const PIX_BANK = 'xxxxxxxxxxxx'; // Nome do banco
 
 // Função para criar sessão de pagamento com Stripe
 exports.createPaymentSession = functions.https.onCall(async (data, context) => {
@@ -186,7 +186,7 @@ function generatePixCode(payload) {
     // Implementação da geração do código PIX
     // Você pode usar uma biblioteca específica para isso
     // ou implementar a lógica manualmente
-    return `00020126580014BR.GOV.BCB.PIX0136${payload.chave}52040000530398654040.005802BR5913${payload.beneficiario}6008${payload.banco}62070503***6304E2CA`;
+    return `00BR.GOV.BCB.PIX00${payload.chave}0000000000.000000000${payload.beneficiario}0000${payload.banco}00000000***000000A`;
 }
 
 // Função auxiliar para gerar QR Code
