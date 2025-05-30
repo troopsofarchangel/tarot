@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tarot Místico - Consultas Online</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Google Auth -->
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
+    <meta name="google-signin-client_id" content="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: url('Tiragem.jpg') no-repeat center center fixed;
+            background-size: cover;
+            min-height: 100vh;
+            overflow-x: hidden;
+            color: #fff;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 30px 0;
+            background: rgba(138, 43, 226, 0.2);
+            border-radius: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 3em;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            color: #E6E6FA;
+        }
+
+        .auth-section {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #8A2BE2, #4B0082);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(138, 43, 226, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            border: 1px solid rgba(138, 43, 226, 0.3);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #FFD700;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #E6E6FA;
+            font-weight: bold;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid rgba(138, 43, 226, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+        }
+
+        .form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .history-section {
+            background: rgba(138, 43, 226, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .curiosities-section {
+            background: rgba(75, 0, 130, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-table {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+        }
+
+        .card {
+            width: 128px;
+            height: 217px;
+            position: relative;
+            margin: 0 auto;
+            cursor: default;
+            transform-style: preserve-3d;
+            transition: transform 0.6s ease;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, #4B0082, #8A2BE2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #FFD700;
+        }
+
+        .card-front {
+            transform: rotateY(180deg);
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #8A2BE2;
+        }
+
+        .card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .reading-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .reading-option {
+            background: rgba(138, 43, 226, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .reading-option:hover {
+            border-color: #FFD700;
+            transform: translateY(-5px);
+        }
+
+        .reading-option h3 {
+            color: #FFD700;
+            margin-bottom: 15px;
+        }
+
+        .reading-option.premium {
+            background: rgba(255, 215, 0, 0.1);
+            border: 2px solid #FFD700;
+        }
+
+        .reading-result {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .drawn-cards {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .drawn-card {
+            width: 100px;
+            height: 170px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            border: 2px solid #8A2BE2;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .drawn-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .plan-indicator {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: rgba(138, 43, 226, 0.9);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .stats-section {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 50px;
+            background: rgba(0, 0, 0, 0.5);
+            border-top: 1px solid rgba(138, 43, 226, 0.3);
+        }
+
+        .footer a {
+            color: #FFD700;
+            text-decoration: none;
+            margin: 0 15px;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 215, 0, 0.9);
+            color: #000;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            z-index: 3000;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.2em;
+            }
+            
+            .card-table {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 10px;
+            }
+            
+            .card {
+                width: 100px;
+                height: 170px;
+            }
+            
+            .reading-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .auth-section {
+                position: relative;
+                top: auto;
+                right: auto;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+        }
+
+        /* Prevent right-click context menu */
+        body {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        /* Disable text selection */
+        ::selection {
+            background: transparent;
+        }
+
+        ::-moz-selection {
+            background: transparent;
+        }
+
+        /* Estilos gerais */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: url('Tiragem.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: #333;
+        }
+
+        /* Estilos para as cartas */
+        .drawn-cards {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .drawn-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            padding: 15px;
+            width: 200px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .drawn-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .drawn-card img {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .drawn-card h3 {
+            margin: 10px 0;
+            color: #2c3e50;
+            font-size: 1.2em;
+        }
+
+        .drawn-card p {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        /* Estilos para a seção de resultado */
+        #reading-result {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px auto;
+            max-width: 1200px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        #reading-result h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .drawn-card {
+                width: 150px;
+            }
+
+            .drawn-card img {
+                height: 225px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .drawn-card {
+                width: 120px;
+            }
+
+            .drawn-card img {
+                height: 180px;
+            }
+
+            .drawn-card h3 {
+                font-size: 1em;
+            }
+
+            .drawn-card p {
+                font-size: 0.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Notification -->
+    <div id="notification" class="notification"></div>
+
+    <!-- Auth Section -->
+    <div class="auth-section">
+        <button id="loginBtn" class="btn">Entrar com Google</button>
+        <button id="logoutBtn" class="btn" style="display: none;">Sair</button>
+    </div>
+
+    <!-- Plan Indicator -->
+    <div id="planIndicator" class="plan-indicator" style="display: none;">
+        Plano: <span id="planType">Gratuito</span>
+    </div>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>Tarot Místico</h1>
+            <p>Desvende os mistérios do futuro através das cartas sagradas</p>
+        </header>
+
+        <!-- History Section -->
+        <section class="history-section">
+            <h2>História do Tarot</h2>
+            <p>O Tarot tem suas origens na Europa do século XV, especificamente na Itália renascentista. Inicialmente criado como um jogo de cartas para a aristocracia, evoluiu para um sistema de adivinhação profundamente simbólico. A corte de Milão foi uma das primeiras a documentar o uso das cartas para consultas místicas, estabelecendo padrões que perduram até hoje.</p>
+            <p>Durante os séculos XVI e XVII, o Tarot se espalhou por toda a Europa, adaptando-se às diferentes culturas e tradições locais. Casos históricos documentam consultas realizadas para reis e rainhas, influenciando decisões políticas importantes. A conexão com a tradição hermética e cabalística fortaleceu sua reputação como ferramenta de autoconhecimento.</p>
+        </section>
+
+        <!-- Curiosities Section -->
+        <section class="curiosities-section">
+            <h2>Curiosidades Históricas</h2>
+            <ol>
+                <li><strong>Napoleão Bonaparte:</strong> Consultava regularmente uma cartomante chamada Madame Lenormand antes de suas campanhas militares mais importantes.</li>
+                <li><strong>Catarina de Médici:</strong> Rainha da França, mantinha astrólogos e cartomantes na corte, influenciando políticas do reino através das cartas.</li>
+                <li><strong>Jung e o Tarot:</strong> Carl Gustav Jung estudou profundamente o simbolismo do Tarot, considerando-o uma representação do inconsciente coletivo.</li>
+                <li><strong>Golden Dawn:</strong> A ordem hermética britânica codificou muitos dos significados modernos das cartas no século XIX.</li>
+                <li><strong>Revolução Francesa:</strong> Durante a revolução, muitos aristocratas consultaram as cartas em busca de orientação sobre o futuro incerto.</li>
+                <li><strong>Arthur Edward Waite:</strong> Criou o baralho mais popular do mundo em 1909, estabelecendo padrões visuais ainda utilizados.</li>
+                <li><strong>Aleister Crowley:</strong> Desenvolveu o Tarot de Thoth, incorporando elementos da tradição hermética e cabalística avançada.</li>
+                <li><strong>Primeira Guerra Mundial:</strong> Soldados consultavam cartomantes antes das batalhas, documentado em diários de guerra.</li>
+                <li><strong>Renascimento Italiano:</strong> Famílias como os Visconti financiaram a criação de baralhos luxuosos, alguns preservados em museus.</li>
+                <li><strong>Tradição Cigana:</strong> Os romani adaptaram o Tarot às suas tradições nômades, criando métodos únicos de leitura ainda praticados.</li>
+            </ol>
+        </section>
+
+        <!-- Card Table Animation -->
+        <section class="card-table" id="cardTable">
+            <!-- Cards will be generated by JavaScript -->
+        </section>
+
+        <!-- Reading Options -->
+        <section class="reading-section">
+            <!-- Free Readings -->
+            <div class="reading-option" onclick="selectReading('1card')">
+                <h3>1 Carta - Conselho Rápido</h3>
+                <p>Orientação imediata para seu dia</p>
+                <p><strong>Gratuito</strong></p>
+            </div>
+
+            <div class="reading-option" onclick="selectReading('3cards')">
+                <h3>3 Cartas - Passado/Presente/Futuro</h3>
+                <p>Visão temporal completa</p>
+                <p><strong>Gratuito</strong></p>
+            </div>
+
+            <div class="reading-option" onclick="selectReading('5cards')">
+                <h3>5 Cartas - Cruz Celta Simples</h3>
+                <p>Leitura tradicional detalhada</p>
+                <p><strong>Gratuito</strong></p>
+            </div>
+
+            <!-- Paid Readings -->
+            <div class="reading-option" onclick="selectReading('9cards')">
+                <h3>9 Cartas - 3x3</h3>
+                <p>Análise completa tridimensional</p>
+                <p><strong>Plano Pago - R$ 9,90</strong></p>
+            </div>
+
+            <div class="reading-option" onclick="selectReading('financial')">
+                <h3>3 Cartas - Financeiro</h3>
+                <p>Especialista em questões monetárias</p>
+                <p><strong>Plano Pago - R$ 9,90</strong></p>
+            </div>
+
+            <div class="reading-option" onclick="selectReading('relationship')">
+                <h3>3 Cartas - Relacionamento</h3>
+                <p>Conselhos amorosos especializados</p>
+                <p><strong>Plano Pago - R$ 9,90</strong></p>
+            </div>
+
+            <div class="reading-option" onclick="selectReading('money')">
+                <h3>1 Carta - Dinheiro</h3>
+                <p>Números da sorte e prosperidade</p>
+                <p><strong>Plano Pago - R$ 9,90</strong></p>
+            </div>
+
+            <div class="reading-option" onclick="selectReading('destiny')">
+                <h3>1 Carta - Destino</h3>
+                <p>Respostas certeiras sobre o futuro</p>
+                <p><strong>Plano Pago - R$ 9,90</strong></p>
+            </div>
+
+            <!-- Premium Readings -->
+            <div class="reading-option premium" onclick="selectReading('35cards')">
+                <h3>35 Cartas - Método Clássico</h3>
+                <p>Leitura completa tradicional</p>
+                <p><strong>Premium - R$ 29,90</strong></p>
+            </div>
+
+            <div class="reading-option premium" onclick="selectReading('10cards')">
+                <h3>10 Cartas - Cruz Celta Completa</h3>
+                <p>Método celta tradicional expandido</p>
+                <p><strong>Premium - R$ 29,90</strong></p>
+            </div>
+        </section>
+
+        <!-- Reading Result -->
+        <div id="readingResult" class="reading-result">
+            <h3>Sua Leitura</h3>
+            <div id="drawnCards" class="drawn-cards"></div>
+            <div id="readingText"></div>
+            <button id="exportBtn" class="btn" style="display: none;" onclick="exportReading()">Exportar Leitura</button>
+        </div>
+
+        <!-- Statistics Section -->
+        <div id="statsSection" class="stats-section">
+            <h3>Suas Estatísticas</h3>
+            <div id="statsContent"></div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('loginModal')">&times;</span>
+            <h2>Complete seu Cadastro</h2>
+            <form id="registrationForm">
+                <div class="form-group">
+                    <label>Nome Completo *</label>
+                    <input type="text" id="fullName" required>
+                </div>
+                <div class="form-group">
+                    <label>Idade *</label>
+                    <input type="number" id="age" min="18" max="100" required>
+                </div>
+                <div class="form-group">
+                    <label>Gênero *</label>
+                    <select id="gender" required>
+                        <option value="">Selecione</option>
+                        <option value="masculino">Masculino</option>
+                        <option value="feminino">Feminino</option>
+                        <option value="outro">Outro</option>
+                        <option value="prefiro-nao-dizer">Prefiro não dizer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>WhatsApp *</label>
+                    <input type="tel" id="whatsapp" placeholder="(11) 99999-9999" required>
+                </div>
+                <button type="submit" class="btn">Finalizar Cadastro</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Terms Modal -->
+    <div id="termsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('termsModal')">&times;</span>
+            <h2>Termos de Uso e Política de Privacidade</h2>
+            <div style="max-height: 400px; overflow-y: auto; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 10px; margin: 20px 0;">
+                <h3>1. Termos de Uso</h3>
+                <p>Ao utilizar nossos serviços de Tarot, você concorda com os seguintes termos:</p>
+                <ul>
+                    <li>As consultas são para fins de entretenimento e reflexão pessoal</li>
+                    <li>Não substituem aconselhamento médico, jurídico ou financeiro profissional</li>
+                    <li>É proibido compartilhar sua conta com terceiros</li>
+                    <li>O uso do site é restrito a maiores de 18 anos</li>
+                </ul>
+                
+                <h3>2. Política de Privacidade</h3>
+                <p>Seus dados são tratados com total confidencialidade:</p>
+                <ul>
+                    <li>Coletamos apenas informações necessárias para o serviço</li>
+                    <li>Nunca compartilhamos dados pessoais com terceiros</li>
+                    <li>Utilizamos criptografia para proteger suas informações</li>
+                    <li>Você pode solicitar exclusão de dados a qualquer momento</li>
+                </ul>
+                
+                <h3>3. Pagamentos e Reembolsos</h3>
+                <ul>
+                    <li>Pagamentos via PIX são processados instantaneamente</li>
+                    <li>Reembolsos podem ser solicitados em até 7 dias</li>
+                    <li>Planos são de pagamento único, sem renovação automática</li>
+                </ul>
+                
+                <h3>4. Responsabilidades</h3>
+                <ul>
+                    <li>O site não se responsabiliza por decisões tomadas baseadas nas leituras</li>
+                    <li>As interpretações são baseadas em simbologias tradicionais do Tarot</li>
+                    <li>Resultados não garantem eventos futuros específicos</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2024 Tarot Místico. Todos os direitos reservados.</p>
+        <div>
+            <a href="#" onclick="openModal('termsModal')">Termos de Uso</a>
+            <a href="#" onclick="openModal('termsModal')">Política de Privacidade</a>
+            <a href="mailto:contato@tarotmistico.com">Contato</a>
+        </div>
+    </footer>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            // Add your Firebase configuration here
+            apiKey: "your-api-key",
+            authDomain: "your-project.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "your-app-id"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Global Variables
+        let currentUser = null;
+        let userPlan = 'free';
+        let freeReadingsCount = 0;
+        let userStats = {
+            totalReadings: 0,
+            majorArcana: 0,
+            minorArcana: 0,
+            elementStats: { fire: 0, water: 0, air: 0, earth: 0 },
+            cardHistory: {},
+            readingHistory: []
+        };
+
+        // Tarot Card Data
+        const tarotCards = {
+            majorArcana: [
+                { name: "O Louco", meaning: "Novos começos, espontaneidade, fé no universo" },
+                { name: "O Mago", meaning: "Manifestação, recursos, poder pessoal" },
+                { name: "A Sacerdotisa", meaning: "Intuição, sabedoria inconsciente, divino feminino" },
+                { name: "A Imperatriz", meaning: "Feminilidade, beleza, natureza, abundância" },
+                { name: "O Imperador", meaning: "Autoridade, estrutura, controle, paternidade" },
+                { name: "O Hierofante", meaning: "Tradição, conformidade, moralidade, ética" },
+                { name: "Os Amantes", meaning: "Amor, harmonia, relacionamentos, valores" },
+                { name: "A Carruagem", meaning: "Controle, determinação, direção, força de vontade" },
+                { name: "A Força", meaning: "Força interior, bravura, compaixão, foco" },
+                { name: "O Eremita", meaning: "Busca da alma, orientação interior, ser inner" },
+                { name: "A Roda da Fortuna", meaning: "Boa sorte, karma, ciclos de vida, destino" },
+                { name: "A Justiça", meaning: "Justiça, equidade, verdade, causa e efeito" },
+                { name: "O Enforcado", meaning: "Suspensão, restrição, abandono, sacrifício" },
+                { name: "A Morte", meaning: "Finais, transformação, transição, metamorfose" },
+                { name: "A Temperança", meaning: "Equilíbrio, moderação, paciência, propósito" },
+                { name: "O Diabo", meaning: "Escravidão, sexualidade, materialismo, ignorância" },
+                { name: "A Torre", meaning: "Desastre súbito, ruptura, revelação, despertar" },
+                { name: "A Estrela", meaning: "Esperança, espiritualidade, renovação, orientação" },
+                { name: "A Lua", meaning: "Ilusão, medo, ansiedade, subconsciente" },
+                { name: "O Sol", meaning: "Alegria, sucesso, celebração, positividade" },
+                { name: "O Julgamento", meaning: "Reflexão, reavaliação, despertar, perdão" },
+                { name: "O Mundo", meaning: "Conclusão, integração, realização, viagem" }
+            ],
+            minorArcana: {
+                cups: [
+                    { name: "Ás de Copas", meaning: "Novo amor, compaixão, criatividade" },
+                    { name: "Dois de Copas", meaning: "Amor mútuo, parceria, união" },
+                    { name: "Três de Copas", meaning: "Celebração, amizade, criatividade" },
+                    { name: "Quatro de Copas", meaning: "Meditação, contemplação, apatia" },
+                    { name: "Cinco de Copas", meaning: "Perda, pesar, autocompaixão" },
+                    { name: "Seis de Copas", meaning: "Revisitar o passado, nostalgia, inocência" },
+                    { name: "Sete de Copas", meaning: "Ilusão, escolhas, pensamento wishful" },
+                    { name: "Oito de Copas", meaning: "Abandono, retirada, escapismo" },
+                    { name: "Nove de Copas", meaning: "Contentamento, satisfação, gratidão" },
+                    { name: "Dez de Copas", meaning: "Harmonia divina, felicidade, alinhamento" }
+                ],
+                wands: [
+                    { name: "Ás de Paus", meaning: "Inspiração, novos empreendimentos, crescimento" },
+                    { name: "Dois de Paus", meaning: "Planejamento futuro, progresso, decisões" },
+                    { name: "Três de Paus", meaning: "Expansão, previsão, liderança" },
+                    { name: "Quatro de Paus", meaning: "Celebração, harmonia, lar, casamento" },
+                    { name: "Cinco de Paus", meaning: "Conflito, desacordo, competição" },
+                    { name: "Seis de Paus", meaning: "Sucesso, reconhecimento público, progresso" },
+                    { name: "Sete de Paus", meaning: "Desafio, competição, perseverança" },
+                    { name: "Oito de Paus", meaning: "Velocidade, ação rápida, movimento aéreo" },
+                    { name: "Nove de Paus", meaning: "Resiliência, coragem, persistência" },
+                    { name: "Dez de Paus", meaning: "Sobrecarga, responsabilidade, trabalho duro" }
+                ],
+                swords: [
+                    { name: "Ás de Espadas", meaning: "Vitória, sucesso, clareza mental" },
+                    { name: "Dois de Espadas", meaning: "Decisão difícil, impasse, indecisão" },
+                    { name: "Três de Espadas", meaning: "Desgosto, tristeza, traição" },
+                    { name: "Quatro de Espadas", meaning: "Descanso, relaxamento, meditação" },
+                    { name: "Cinco de Espadas", meaning: "Derrota, rendição, caminhada" },
+                    { name: "Seis de Espadas", meaning: "Transição, mudança, águas mais calmas" },
+                    { name: "Sete de Espadas", meaning: "Traição, engano, fugir" },
+                    { name: "Oito de Espadas", meaning: "Prisão, restrição, limitação" },
+                    { name: "Nove de Espadas", meaning: "Ansiedade, preocupação, pesadelos" },
+                    { name: "Dez de Espadas", meaning: "Dor, ruína, fracasso, vitimização" }
+                ],
+                pentacles: [
+                    { name: "Ás de Ouros", meaning: "Manifestação, nova oportunidade financeira" },
+                    { name: "Dois de Ouros", meaning: "Múltiplas prioridades, gestão de tempo" },
+                    { name: "Três de Ouros", meaning: "Trabalho em equipe, colaboração, habilidade" },
+                    { name: "Quatro de Ouros", meaning: "Conservação, frugalidade, segurança" },
+                    { name: "Cinco de Ouros", meaning: "Necessidade financeira, pobreza, insegurança" },
+                    { name: "Seis de Ouros", meaning: "Dar, receber, compartilhar riqueza" },
+                    { name: "Sete de Ouros", meaning: "Investimento de longo prazo, perseverança" },
+                    { name: "Oito de Ouros", meaning: "Aprendizado, dedicação, desenvolvimento de habilidades" },
+                    { name: "Nove de Ouros", meaning: "Abundância, luxo, auto-suficiência" },
+                    { name: "Dez de Ouros", meaning: "Riqueza, herança, culminação financeira" }
+                ]
+            }
+        };
+
+        // Disable right-click context menu
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        // Disable F12, Ctrl+Shift+I, Ctrl+U
+        document.addEventListener('keydown', function(e) {
+            if (e.keyCode == 123 || 
+                (e.ctrlKey && e.shiftKey && e.keyCode == 73) || 
+                (e.ctrlKey && e.keyCode == 85)) {
+                e.preventDefault();
+            }
+        });
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            createCardTable();
+            animateCards();
+            
+            // Auth state listener
+            auth.onAuthStateChanged(function(user) {
+                if (user) {
+                    currentUser = user;
+                    checkUserRegistration();
+                    showElement('logoutBtn');
+                    hideElement('loginBtn');
+                    showElement('planIndicator');
+                    loadUserStats();
+                } else {
+                    currentUser = null;
+                    userPlan = 'free';
+                    hideElement('logoutBtn');
+                    showElement('loginBtn');
+                    hideElement('planIndicator');
+                }
+            });
+        });
+
+        // Create card table with animation
+        function createCardTable() {
+            const cardTable = document.getElementById('cardTable');
+            const allCards = [
+                // Arcanos Maiores (22 cartas)
+                { name: "O Louco", image: "ar00.jpg", meaning: "Novos começos, espontaneidade, fé no universo" },
+                { name: "O Mago", image: "ar01.jpg", meaning: "Manifestação, recursos, poder pessoal" },
+                { name: "A Sacerdotisa", image: "ar02.jpg", meaning: "Intuição, sabedoria inconsciente, divino feminino" },
+                { name: "A Imperatriz", image: "ar03.jpg", meaning: "Feminilidade, beleza, natureza, abundância" },
+                { name: "O Imperador", image: "ar04.jpg", meaning: "Autoridade, estrutura, controle, paternidade" },
+                { name: "O Hierofante", image: "ar05.jpg", meaning: "Tradição, conformidade, moralidade, ética" },
+                { name: "Os Amantes", image: "ar06.jpg", meaning: "Amor, harmonia, relacionamentos, valores" },
+                { name: "A Carruagem", image: "ar07.jpg", meaning: "Controle, determinação, direção, força de vontade" },
+                { name: "A Força", image: "ar08.jpg", meaning: "Força interior, bravura, compaixão, foco" },
+                { name: "O Eremita", image: "ar09.jpg", meaning: "Busca da alma, orientação interior, ser inner" },
+                { name: "A Roda da Fortuna", image: "ar10.jpg", meaning: "Boa sorte, karma, ciclos de vida, destino" },
+                { name: "A Justiça", image: "ar11.jpg", meaning: "Justiça, equidade, verdade, causa e efeito" },
+                { name: "O Enforcado", image: "ar12.jpg", meaning: "Suspensão, restrição, abandono, sacrifício" },
+                { name: "A Morte", image: "ar13.jpg", meaning: "Finais, transformação, transição, metamorfose" },
+                { name: "A Temperança", image: "ar14.jpg", meaning: "Equilíbrio, moderação, paciência, propósito" },
+                { name: "O Diabo", image: "ar15.jpg", meaning: "Escravidão, sexualidade, materialismo, ignorância" },
+                { name: "A Torre", image: "ar16.jpg", meaning: "Desastre súbito, ruptura, revelação, despertar" },
+                { name: "A Estrela", image: "ar17.jpg", meaning: "Esperança, espiritualidade, renovação, orientação" },
+                { name: "A Lua", image: "ar18.jpg", meaning: "Ilusão, medo, ansiedade, subconsciente" },
+                { name: "O Sol", image: "ar19.jpg", meaning: "Alegria, sucesso, celebração, positividade" },
+                { name: "O Julgamento", image: "ar20.jpg", meaning: "Reflexão, reavaliação, despertar, perdão" },
+                { name: "O Mundo", image: "ar21.jpg", meaning: "Conclusão, integração, realização, viagem" },
+                
+                // Copas (14 cartas)
+                { name: "Ás de Copas", image: "cuac.jpg", meaning: "Novo amor, compaixão, criatividade" },
+                { name: "Dois de Copas", image: "cu02.jpg", meaning: "Amor mútuo, parceria, união" },
+                { name: "Três de Copas", image: "cu03.jpg", meaning: "Celebração, amizade, criatividade" },
+                { name: "Quatro de Copas", image: "cu04.jpg", meaning: "Meditação, contemplação, apatia" },
+                { name: "Cinco de Copas", image: "cu05.jpg", meaning: "Perda, pesar, autocompaixão" },
+                { name: "Seis de Copas", image: "cu06.jpg", meaning: "Revisitar o passado, nostalgia, inocência" },
+                { name: "Sete de Copas", image: "cu07.jpg", meaning: "Ilusão, escolhas, pensamento wishful" },
+                { name: "Oito de Copas", image: "cu08.jpg", meaning: "Abandono, retirada, escapismo" },
+                { name: "Nove de Copas", image: "cu09.jpg", meaning: "Contentamento, satisfação, gratidão" },
+                { name: "Dez de Copas", image: "cu10.jpg", meaning: "Harmonia divina, felicidade, alinhamento" },
+                { name: "Rei de Copas", image: "cuki.jpg", meaning: "Compaixão, sabedoria emocional, diplomacia" },
+                { name: "Rainha de Copas", image: "cuqu.jpg", meaning: "Intuição, empatia, amor incondicional" },
+                { name: "Valete de Copas", image: "cupa.jpg", meaning: "Criatividade, sensibilidade, novos sentimentos" },
+                { name: "Cavaleiro de Copas", image: "cukn.jpg", meaning: "Romantismo, aventura, emoções intensas" },
+                
+                // Paus (14 cartas)
+                { name: "Ás de Paus", image: "waac.jpg", meaning: "Inspiração, novos empreendimentos, crescimento" },
+                { name: "Dois de Paus", image: "wa02.jpg", meaning: "Planejamento futuro, progresso, decisões" },
+                { name: "Três de Paus", image: "wa03.jpg", meaning: "Expansão, previsão, liderança" },
+                { name: "Quatro de Paus", image: "wa04.jpg", meaning: "Celebração, harmonia, lar, casamento" },
+                { name: "Cinco de Paus", image: "wa05.jpg", meaning: "Conflito, desacordo, competição" },
+                { name: "Seis de Paus", image: "wa06.jpg", meaning: "Sucesso, reconhecimento público, progresso" },
+                { name: "Sete de Paus", image: "wa07.jpg", meaning: "Desafio, competição, perseverança" },
+                { name: "Oito de Paus", image: "wa08.jpg", meaning: "Velocidade, ação rápida, movimento aéreo" },
+                { name: "Nove de Paus", image: "wa09.jpg", meaning: "Resiliência, coragem, persistência" },
+                { name: "Dez de Paus", image: "wa10.jpg", meaning: "Sobrecarga, responsabilidade, trabalho duro" },
+                { name: "Rei de Paus", image: "waki.jpg", meaning: "Liderança, criatividade, entusiasmo" },
+                { name: "Rainha de Paus", image: "waqu.jpg", meaning: "Independência, confiança, determinação" },
+                { name: "Valete de Paus", image: "wapa.jpg", meaning: "Aventura, entusiasmo, novas ideias" },
+                { name: "Cavaleiro de Paus", image: "wakn.jpg", meaning: "Ação, aventura, mudança rápida" },
+                
+                // Espadas (14 cartas)
+                { name: "Ás de Espadas", image: "swac.jpg", meaning: "Vitória, sucesso, clareza mental" },
+                { name: "Dois de Espadas", image: "sw02.jpg", meaning: "Decisão difícil, impasse, indecisão" },
+                { name: "Três de Espadas", image: "sw03.jpg", meaning: "Desgosto, tristeza, traição" },
+                { name: "Quatro de Espadas", image: "sw04.jpg", meaning: "Descanso, relaxamento, meditação" },
+                { name: "Cinco de Espadas", image: "sw05.jpg", meaning: "Derrota, rendição, caminhada" },
+                { name: "Seis de Espadas", image: "sw06.jpg", meaning: "Transição, mudança, águas mais calmas" },
+                { name: "Sete de Espadas", image: "sw07.jpg", meaning: "Traição, engano, fugir" },
+                { name: "Oito de Espadas", image: "sw08.jpg", meaning: "Prisão, restrição, limitação" },
+                { name: "Nove de Espadas", image: "sw09.jpg", meaning: "Ansiedade, preocupação, pesadelos" },
+                { name: "Dez de Espadas", image: "sw10.jpg", meaning: "Dor, ruína, fracasso, vitimização" },
+                { name: "Rei de Espadas", image: "swki.jpg", meaning: "Intelecto, autoridade, justiça" },
+                { name: "Rainha de Espadas", image: "swqu.jpg", meaning: "Clareza mental, independência, honestidade" },
+                { name: "Valete de Espadas", image: "swpa.jpg", meaning: "Curiosidade, comunicação, novas ideias" },
+                { name: "Cavaleiro de Espadas", image: "swkn.jpg", meaning: "Ação rápida, mudança, conflito" },
+                
+                // Ouros (14 cartas)
+                { name: "Ás de Ouros", image: "peac.jpg", meaning: "Manifestação, nova oportunidade financeira" },
+                { name: "Dois de Ouros", image: "pe02.jpg", meaning: "Múltiplas prioridades, gestão de tempo" },
+                { name: "Três de Ouros", image: "pe03.jpg", meaning: "Trabalho em equipe, colaboração, habilidade" },
+                { name: "Quatro de Ouros", image: "pe04.jpg", meaning: "Conservação, frugalidade, segurança" },
+                { name: "Cinco de Ouros", image: "pe05.jpg", meaning: "Necessidade financeira, pobreza, insegurança" },
+                { name: "Seis de Ouros", image: "pe06.jpg", meaning: "Dar, receber, compartilhar riqueza" },
+                { name: "Sete de Ouros", image: "pe07.jpg", meaning: "Investimento de longo prazo, perseverança" },
+                { name: "Oito de Ouros", image: "pe08.jpg", meaning: "Aprendizado, dedicação, desenvolvimento de habilidades" },
+                { name: "Nove de Ouros", image: "pe09.jpg", meaning: "Abundância, luxo, auto-suficiência" },
+                { name: "Dez de Ouros", image: "pe10.jpg", meaning: "Riqueza, herança, culminação financeira" },
+                { name: "Rei de Ouros", image: "peki.jpg", meaning: "Estabilidade, segurança, abundância" },
+                { name: "Rainha de Ouros", image: "pequ.jpg", meaning: "Praticidade, conforto, generosidade" },
+                { name: "Valete de Ouros", image: "pepa.jpg", meaning: "Aprendizado, dedicação, novas oportunidades" },
+                { name: "Cavaleiro de Ouros", image: "pekn.jpg", meaning: "Trabalho duro, responsabilidade, progresso" }
+            ];
+            
+            // Create cards
+            allCards.forEach(card => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'card';
+                cardElement.innerHTML = `
+                    <div class="card-face card-back">
+                        <img src="images/carta-back.jpg" alt="Verso da Carta" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">
+                    </div>
+                    <div class="card-face card-front">
+                        <img src="images/${card.image}" alt="${card.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">
+                    </div>
+                `;
+                cardTable.appendChild(cardElement);
+            });
+        }
+
+        function getCardImageName(card) {
+            if (!card) return 'carta-back.jpg';
+            
+            // Mapeamento para os nomes dos arquivos
+            const cardMap = {
+                // Arcanos Maiores (22 cartas)
+                'O Louco': 'ar00.jpg',
+                'O Mago': 'ar01.jpg',
+                'A Sacerdotisa': 'ar02.jpg',
+                'A Imperatriz': 'ar03.jpg',
+                'O Imperador': 'ar04.jpg',
+                'O Hierofante': 'ar05.jpg',
+                'Os Amantes': 'ar06.jpg',
+                'A Carruagem': 'ar07.jpg',
+                'A Força': 'ar08.jpg',
+                'O Eremita': 'ar09.jpg',
+                'A Roda da Fortuna': 'ar10.jpg',
+                'A Justiça': 'ar11.jpg',
+                'O Enforcado': 'ar12.jpg',
+                'A Morte': 'ar13.jpg',
+                'A Temperança': 'ar14.jpg',
+                'O Diabo': 'ar15.jpg',
+                'A Torre': 'ar16.jpg',
+                'A Estrela': 'ar17.jpg',
+                'A Lua': 'ar18.jpg',
+                'O Sol': 'ar19.jpg',
+                'O Julgamento': 'ar20.jpg',
+                'O Mundo': 'ar21.jpg',
+                
+                // Copas (14 cartas)
+                'Ás de Copas': 'cuac.jpg',
+                'Dois de Copas': 'cu02.jpg',
+                'Três de Copas': 'cu03.jpg',
+                'Quatro de Copas': 'cu04.jpg',
+                'Cinco de Copas': 'cu05.jpg',
+                'Seis de Copas': 'cu06.jpg',
+                'Sete de Copas': 'cu07.jpg',
+                'Oito de Copas': 'cu08.jpg',
+                'Nove de Copas': 'cu09.jpg',
+                'Dez de Copas': 'cu10.jpg',
+                'Rei de Copas': 'cuki.jpg',
+                'Rainha de Copas': 'cuqu.jpg',
+                'Valete de Copas': 'cupa.jpg',
+                'Cavaleiro de Copas': 'cukn.jpg',
+                
+                // Paus (14 cartas)
+                'Ás de Paus': 'waac.jpg',
+                'Dois de Paus': 'wa02.jpg',
+                'Três de Paus': 'wa03.jpg',
+                'Quatro de Paus': 'wa04.jpg',
+                'Cinco de Paus': 'wa05.jpg',
+                'Seis de Paus': 'wa06.jpg',
+                'Sete de Paus': 'wa07.jpg',
+                'Oito de Paus': 'wa08.jpg',
+                'Nove de Paus': 'wa09.jpg',
+                'Dez de Paus': 'wa10.jpg',
+                'Rei de Paus': 'waki.jpg',
+                'Rainha de Paus': 'waqu.jpg',
+                'Valete de Paus': 'wapa.jpg',
+                'Cavaleiro de Paus': 'wakn.jpg',
+                
+                // Espadas (14 cartas)
+                'Ás de Espadas': 'swac.jpg',
+                'Dois de Espadas': 'sw02.jpg',
+                'Três de Espadas': 'sw03.jpg',
+                'Quatro de Espadas': 'sw04.jpg',
+                'Cinco de Espadas': 'sw05.jpg',
+                'Seis de Espadas': 'sw06.jpg',
+                'Sete de Espadas': 'sw07.jpg',
+                'Oito de Espadas': 'sw08.jpg',
+                'Nove de Espadas': 'sw09.jpg',
+                'Dez de Espadas': 'sw10.jpg',
+                'Rei de Espadas': 'swki.jpg',
+                'Rainha de Espadas': 'swqu.jpg',
+                'Valete de Espadas': 'swpa.jpg',
+                'Cavaleiro de Espadas': 'swkn.jpg',
+                
+                // Ouros (14 cartas)
+                'Ás de Ouros': 'peac.jpg',
+                'Dois de Ouros': 'pe02.jpg',
+                'Três de Ouros': 'pe03.jpg',
+                'Quatro de Ouros': 'pe04.jpg',
+                'Cinco de Ouros': 'pe05.jpg',
+                'Seis de Ouros': 'pe06.jpg',
+                'Sete de Ouros': 'pe07.jpg',
+                'Oito de Ouros': 'pe08.jpg',
+                'Nove de Ouros': 'pe09.jpg',
+                'Dez de Ouros': 'pe10.jpg',
+                'Rei de Ouros': 'peki.jpg',
+                'Rainha de Ouros': 'pequ.jpg',
+                'Valete de Ouros': 'pepa.jpg',
+                'Cavaleiro de Ouros': 'pekn.jpg'
+            };
+            
+            return cardMap[card.name] || 'carta-back.jpg';
+        }
+
+        // Animate cards periodically
+        function animateCards() {
+            const cards = document.querySelectorAll('.card');
+            
+            setInterval(() => {
+                // Randomly flip 3-5 cards
+                const numCards = Math.floor(Math.random() * 3) + 3;
+                const selectedCards = [];
+                
+                for (let i = 0; i < numCards; i++) {
+                    const randomIndex = Math.floor(Math.random() * cards.length);
+                    if (!selectedCards.includes(randomIndex)) {
+                        selectedCards.push(randomIndex);
+                        
+                        const card = cards[randomIndex];
+                        card.classList.add('flipped');
+                        
+                        // Flip back after 3 seconds
+                        setTimeout(() => {
+                            card.classList.remove('flipped');
+                        }, 3000);
+                    }
+                }
+            }, 5000);
+        }
+
+        // Authentication functions
+        function signInWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(function(error) {
+                showNotification('Erro ao fazer login: ' + error.message, 'error');
+            });
+        }
+
+        function signOut() {
+            auth.signOut().then(() => {
+                showNotification('Logout realizado com sucesso!', 'success');
+                location.reload();
+            });
+        }
+
+        function checkUserRegistration() {
+            db.collection('users').doc(currentUser.uid).get().then(doc => {
+                if (!doc.exists) {
+                    // Show registration modal
+                    document.getElementById('fullName').value = currentUser.displayName || '';
+                    document.getElementById('email').value = currentUser.email || '';
+                    openModal('loginModal');
+                } else {
+                    const userData = doc.data();
+                    userPlan = userData.plan || 'free';
+                    updatePlanIndicator();
+                }
+            });
+        }
+
+        // Registration form submission
+        document.getElementById('registrationForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const userData = {
+                fullName: document.getElementById('fullName').value,
+                age: parseInt(document.getElementById('age').value),
+                gender: document.getElementById('gender').value,
+                email: currentUser.email,
+                whatsapp: document.getElementById('whatsapp').value,
+                plan: 'free',
+                registrationDate: firebase.firestore.FieldValue.serverTimestamp(),
+                stats: {
+                    totalReadings: 0,
+                    majorArcana: 0,
+                    minorArcana: 0,
+                    elementStats: { fire: 0, water: 0, air: 0, earth: 0 },
+                    cardHistory: {},
+                    readingHistory: []
+                }
+            };
+
+            db.collection('users').doc(currentUser.uid).set(userData).then(() => {
+                showNotification('Cadastro realizado com sucesso!', 'success');
+                closeModal('loginModal');
+                updatePlanIndicator();
+            }).catch(error => {
+                showNotification('Erro ao salvar cadastro: ' + error.message, 'error');
+            });
+        });
+
+        // Reading selection and execution
+        function selectReading(type) {
+            if (!currentUser) {
+                showNotification('Faça login para realizar consultas!', 'error');
+                return;
+            }
+
+            // Check plan limitations
+            const paidReadings = ['9cards', 'financial', 'relationship', 'money', 'destiny'];
+            const premiumReadings = ['35cards', '10cards'];
+            
+            if (paidReadings.includes(type) && userPlan === 'free') {
+                showNotification('Esta consulta requer o plano pago (R$ 9,90)', 'error');
+                return;
+            }
+            
+            if (premiumReadings.includes(type) && userPlan !== 'premium') {
+                showNotification('Esta consulta requer o plano premium (R$ 29,90)', 'error');
+                return;
+            }
+
+            // Check free reading limits
+            if (userPlan === 'free' && freeReadingsCount >= 3) {
+                showNotification('Limite de consultas gratuitas atingido. Adquira um plano para continuar.', 'error');
+                return;
+            }
+
+            performReading(type);
+        }
+
+        function performReading(type) {
+            const readingMethods = {
+                '1card': () => drawCards(1, 'Conselho Rápido'),
+                '3cards': () => drawCards(3, 'Passado/Presente/Futuro'),
+                '5cards': () => drawCards(5, 'Cruz Celta Simples'),
+                '9cards': () => drawCards(9, 'Método 3x3'),
+                'financial': () => drawCards(3, 'Consulta Financeira'),
+                'relationship': () => drawCards(3, 'Consulta Amorosa'),
+                'money': () => drawCards(1, 'Dinheiro e Prosperidade'),
+                'destiny': () => drawCards(1, 'Destino e Futuro'),
+                '35cards': () => drawCards(35, 'Método Clássico 35 Cartas'),
+                '10cards': () => drawCards(10, 'Cruz Celta Completa')
+            };
+
+            if (readingMethods[type]) {
+                readingMethods[type]();
+                
+                // Update counters
+                if (userPlan === 'free') {
+                    freeReadingsCount++;
+                }
+                
+                updateUserStats(type);
+            }
+        }
+
+        function drawCards(numCards, readingTitle) {
+            // Get all available cards
+            const allCards = [
+                // Arcanos Maiores
+                { name: "O Louco", image: "ar00.jpg", meaning: "Novos começos, espontaneidade, fé no universo" },
+                { name: "O Mago", image: "ar01.jpg", meaning: "Manifestação, recursos, poder pessoal" },
+                { name: "A Sacerdotisa", image: "ar02.jpg", meaning: "Intuição, sabedoria inconsciente, divino feminino" },
+                { name: "A Imperatriz", image: "ar03.jpg", meaning: "Feminilidade, beleza, natureza, abundância" },
+                { name: "O Imperador", image: "ar04.jpg", meaning: "Autoridade, estrutura, controle, paternidade" },
+                { name: "O Hierofante", image: "ar05.jpg", meaning: "Tradição, conformidade, moralidade, ética" },
+                { name: "Os Amantes", image: "ar06.jpg", meaning: "Amor, harmonia, relacionamentos, valores" },
+                { name: "A Carruagem", image: "ar07.jpg", meaning: "Controle, determinação, direção, força de vontade" },
+                { name: "A Força", image: "ar08.jpg", meaning: "Força interior, bravura, compaixão, foco" },
+                { name: "O Eremita", image: "ar09.jpg", meaning: "Busca da alma, orientação interior, ser inner" },
+                { name: "A Roda da Fortuna", image: "ar10.jpg", meaning: "Boa sorte, karma, ciclos de vida, destino" },
+                { name: "A Justiça", image: "ar11.jpg", meaning: "Justiça, equidade, verdade, causa e efeito" },
+                { name: "O Enforcado", image: "ar12.jpg", meaning: "Suspensão, restrição, abandono, sacrifício" },
+                { name: "A Morte", image: "ar13.jpg", meaning: "Finais, transformação, transição, metamorfose" },
+                { name: "A Temperança", image: "ar14.jpg", meaning: "Equilíbrio, moderação, paciência, propósito" },
+                { name: "O Diabo", image: "ar15.jpg", meaning: "Escravidão, sexualidade, materialismo, ignorância" },
+                { name: "A Torre", image: "ar16.jpg", meaning: "Desastre súbito, ruptura, revelação, despertar" },
+                { name: "A Estrela", image: "ar17.jpg", meaning: "Esperança, espiritualidade, renovação, orientação" },
+                { name: "A Lua", image: "ar18.jpg", meaning: "Ilusão, medo, ansiedade, subconsciente" },
+                { name: "O Sol", image: "ar19.jpg", meaning: "Alegria, sucesso, celebração, positividade" },
+                { name: "O Julgamento", image: "ar20.jpg", meaning: "Reflexão, reavaliação, despertar, perdão" },
+                { name: "O Mundo", image: "ar21.jpg", meaning: "Conclusão, integração, realização, viagem" },
+                
+                // Copas
+                { name: "Ás de Copas", image: "cuac.jpg", meaning: "Novo amor, compaixão, criatividade" },
+                { name: "Dois de Copas", image: "cu02.jpg", meaning: "Amor mútuo, parceria, união" },
+                { name: "Três de Copas", image: "cu03.jpg", meaning: "Celebração, amizade, criatividade" },
+                { name: "Quatro de Copas", image: "cu04.jpg", meaning: "Meditação, contemplação, apatia" },
+                { name: "Cinco de Copas", image: "cu05.jpg", meaning: "Perda, pesar, autocompaixão" },
+                { name: "Seis de Copas", image: "cu06.jpg", meaning: "Revisitar o passado, nostalgia, inocência" },
+                { name: "Sete de Copas", image: "cu07.jpg", meaning: "Ilusão, escolhas, pensamento wishful" },
+                { name: "Oito de Copas", image: "cu08.jpg", meaning: "Abandono, retirada, escapismo" },
+                { name: "Nove de Copas", image: "cu09.jpg", meaning: "Contentamento, satisfação, gratidão" },
+                { name: "Dez de Copas", image: "cu10.jpg", meaning: "Harmonia divina, felicidade, alinhamento" },
+                { name: "Rei de Copas", image: "cuki.jpg", meaning: "Compaixão, sabedoria emocional, diplomacia" },
+                { name: "Rainha de Copas", image: "cuqu.jpg", meaning: "Intuição, empatia, amor incondicional" },
+                { name: "Valete de Copas", image: "cupa.jpg", meaning: "Criatividade, sensibilidade, novos sentimentos" },
+                { name: "Cavaleiro de Copas", image: "cukn.jpg", meaning: "Romantismo, aventura, emoções intensas" },
+                
+                // Paus
+                { name: "Ás de Paus", image: "waac.jpg", meaning: "Inspiração, novos empreendimentos, crescimento" },
+                { name: "Dois de Paus", image: "wa02.jpg", meaning: "Planejamento futuro, progresso, decisões" },
+                { name: "Três de Paus", image: "wa03.jpg", meaning: "Expansão, previsão, liderança" },
+                { name: "Quatro de Paus", image: "wa04.jpg", meaning: "Celebração, harmonia, lar, casamento" },
+                { name: "Cinco de Paus", image: "wa05.jpg", meaning: "Conflito, desacordo, competição" },
+                { name: "Seis de Paus", image: "wa06.jpg", meaning: "Sucesso, reconhecimento público, progresso" },
+                { name: "Sete de Paus", image: "wa07.jpg", meaning: "Desafio, competição, perseverança" },
+                { name: "Oito de Paus", image: "wa08.jpg", meaning: "Velocidade, ação rápida, movimento aéreo" },
+                { name: "Nove de Paus", image: "wa09.jpg", meaning: "Resiliência, coragem, persistência" },
+                { name: "Dez de Paus", image: "wa10.jpg", meaning: "Sobrecarga, responsabilidade, trabalho duro" },
+                { name: "Rei de Paus", image: "waki.jpg", meaning: "Liderança, criatividade, entusiasmo" },
+                { name: "Rainha de Paus", image: "waqu.jpg", meaning: "Independência, confiança, determinação" },
+                { name: "Valete de Paus", image: "wapa.jpg", meaning: "Aventura, entusiasmo, novas ideias" },
+                { name: "Cavaleiro de Paus", image: "wakn.jpg", meaning: "Ação, aventura, mudança rápida" },
+                
+                // Espadas
+                { name: "Ás de Espadas", image: "swac.jpg", meaning: "Vitória, sucesso, clareza mental" },
+                { name: "Dois de Espadas", image: "sw02.jpg", meaning: "Decisão difícil, impasse, indecisão" },
+                { name: "Três de Espadas", image: "sw03.jpg", meaning: "Desgosto, tristeza, traição" },
+                { name: "Quatro de Espadas", image: "sw04.jpg", meaning: "Descanso, relaxamento, meditação" },
+                { name: "Cinco de Espadas", image: "sw05.jpg", meaning: "Derrota, rendição, caminhada" },
+                { name: "Seis de Espadas", image: "sw06.jpg", meaning: "Transição, mudança, águas mais calmas" },
+                { name: "Sete de Espadas", image: "sw07.jpg", meaning: "Traição, engano, fugir" },
+                { name: "Oito de Espadas", image: "sw08.jpg", meaning: "Prisão, restrição, limitação" },
+                { name: "Nove de Espadas", image: "sw09.jpg", meaning: "Ansiedade, preocupação, pesadelos" },
+                { name: "Dez de Espadas", image: "sw10.jpg", meaning: "Dor, ruína, fracasso, vitimização" },
+                { name: "Rei de Espadas", image: "swki.jpg", meaning: "Intelecto, autoridade, justiça" },
+                { name: "Rainha de Espadas", image: "swqu.jpg", meaning: "Clareza mental, independência, honestidade" },
+                { name: "Valete de Espadas", image: "swpa.jpg", meaning: "Curiosidade, comunicação, novas ideias" },
+                { name: "Cavaleiro de Espadas", image: "swkn.jpg", meaning: "Ação rápida, mudança, conflito" },
+                
+                // Ouros
+                { name: "Ás de Ouros", image: "peac.jpg", meaning: "Manifestação, nova oportunidade financeira" },
+                { name: "Dois de Ouros", image: "pe02.jpg", meaning: "Múltiplas prioridades, gestão de tempo" },
+                { name: "Três de Ouros", image: "pe03.jpg", meaning: "Trabalho em equipe, colaboração, habilidade" },
+                { name: "Quatro de Ouros", image: "pe04.jpg", meaning: "Conservação, frugalidade, segurança" },
+                { name: "Cinco de Ouros", image: "pe05.jpg", meaning: "Necessidade financeira, pobreza, insegurança" },
+                { name: "Seis de Ouros", image: "pe06.jpg", meaning: "Dar, receber, compartilhar riqueza" },
+                { name: "Sete de Ouros", image: "pe07.jpg", meaning: "Investimento de longo prazo, perseverança" },
+                { name: "Oito de Ouros", image: "pe08.jpg", meaning: "Aprendizado, dedicação, desenvolvimento de habilidades" },
+                { name: "Nove de Ouros", image: "pe09.jpg", meaning: "Abundância, luxo, auto-suficiência" },
+                { name: "Dez de Ouros", image: "pe10.jpg", meaning: "Riqueza, herança, culminação financeira" },
+                { name: "Rei de Ouros", image: "peki.jpg", meaning: "Estabilidade, segurança, abundância" },
+                { name: "Rainha de Ouros", image: "pequ.jpg", meaning: "Praticidade, conforto, generosidade" },
+                { name: "Valete de Ouros", image: "pepa.jpg", meaning: "Aprendizado, dedicação, novas oportunidades" },
+                { name: "Cavaleiro de Ouros", image: "pekn.jpg", meaning: "Trabalho duro, responsabilidade, progresso" }
+            ];
+
+            // Shuffle and draw cards
+            const shuffledCards = shuffleArray([...allCards]);
+            const drawnCards = shuffledCards.slice(0, numCards);
+
+            // Display results
+            displayReadingResult(drawnCards, readingTitle);
+        }
+
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+
+        function displayReadingResult(cards, readingTitle) {
+            const resultSection = document.getElementById('reading-result');
+            const resultContent = document.getElementById('result-content');
+            
+            // Limpa o conteúdo anterior
+            resultContent.innerHTML = '';
+            
+            // Adiciona o título da leitura
+            const title = document.createElement('h2');
+            title.textContent = readingTitle;
+            resultContent.appendChild(title);
+            
+            // Cria o container para as cartas
+            const cardsContainer = document.createElement('div');
+            cardsContainer.className = 'drawn-cards';
+            
+            // Adiciona cada carta
+            cards.forEach((card, index) => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'drawn-card';
+                
+                // Adiciona a imagem da carta
+                const cardImage = document.createElement('img');
+                cardImage.src = `images/${card.image}`;
+                cardImage.alt = card.name;
+                cardElement.appendChild(cardImage);
+                
+                // Adiciona o nome da carta
+                const cardName = document.createElement('h3');
+                cardName.textContent = card.name;
+                cardElement.appendChild(cardName);
+                
+                // Adiciona o significado da carta
+                const cardMeaning = document.createElement('p');
+                cardMeaning.textContent = card.meaning;
+                cardElement.appendChild(cardMeaning);
+                
+                cardsContainer.appendChild(cardElement);
+            });
+            
+            resultContent.appendChild(cardsContainer);
+            
+            // Mostra a seção de resultado
+            resultSection.style.display = 'block';
+            
+            // Rola até a seção de resultado
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function generateReading(cards, title) {
+            let reading = `<h4>${title}</h4>`;
+            
+            // Generate interpretation based on plan
+            const isPaid = userPlan !== 'free';
+            const detailLevel = isPaid ? 'detailed' : 'summary';
+
+            cards.forEach((card, index) => {
+                const cardInterpretation = generateCardInterpretation(card, index, detailLevel, title);
+                reading += `<div style="margin: 20px 0; padding: 15px; background: rgba(138, 43, 226, 0.1); border-radius: 10px;">`;
+                reading += `<h5>${card.name}</h5>`;
+                reading += `<p><strong>Significado:</strong> ${card.meaning}</p>`;
+                reading += cardInterpretation;
+                reading += `</div>`;
+            });
+
+            // Add combination analysis for paid users
+            if (isPaid) {
+                reading += generateCombinationAnalysis(cards);
+                reading += generateElementalAnalysis(cards);
+                reading += generateAdvice(cards, title);
+            }
+
+            return reading;
+        }
+
+        function generateCardInterpretation(card, position, detailLevel, readingTitle) {
+            const interpretations = {
+                'Conselho Rápido': [`Esta carta sugere que você deve focar em ${getCardKeyword(card)} hoje.`],
+                'Passado/Presente/Futuro': [
+                    `Seu passado mostra influências de ${getCardKeyword(card)}.`,
+                    `No presente, ${getCardKeyword(card)} está muito ativo em sua vida.`,
+                    `O futuro indica que ${getCardKeyword(card)} será importante.`
+                ],
+                'Cruz Celta Simples': [
+                    `A situação atual está relacionada a ${getCardKeyword(card)}.`,
+                    `Os desafios envolvem ${getCardKeyword(card)}.`,
+                    `Suas aspirações conectam-se com ${getCardKeyword(card)}.`,
+                    `O passado recente trouxe ${getCardKeyword(card)}.`,
+                    `O resultado final será influenciado por ${getCardKeyword(card)}.`
+                ]
+            };
+
+            const baseInterpretation = interpretations[readingTitle] 
+                ? interpretations[readingTitle][position] || `Esta posição indica ${getCardKeyword(card)}.`
+                : `Esta carta representa ${getCardKeyword(card)} em sua consulta.`;
+
+            if (detailLevel === 'detailed') {
+                return `<p><strong>Interpretação:</strong> ${baseInterpretation} ${generateDetailedInterpretation(card)}</p>`;
+            } else {
+                return `<p><strong>Interpretação:</strong> ${baseInterpretation}</p>`;
+            }
+        }
+
+        function getCardKeyword(card) {
+            const keywords = {
+                'O Louco': 'novos começos e espontaneidade',
+                'O Mago': 'poder pessoal e manifestação',
+                'A Sacerdotisa': 'intuição e sabedoria',
+                'A Imperatriz': 'abundância e fertilidade',
+                'O Imperador': 'autoridade e estrutura',
+                'O Hierofante': 'tradição e ensino',
+                'Os Amantes': 'relacionamentos e escolhas',
+                'A Carruagem': 'determinação e controle',
+                'A Força': 'coragem e força interior',
+                'O Eremita': 'introspecção e orientação',
+                'A Roda da Fortuna': 'mudança e destino',
+                'A Justiça': 'equilíbrio e verdade',
+                'O Enforcado': 'paciência e sacrifício',
+                'A Morte': 'transformação e renovação',
+                'A Temperança': 'moderação e harmonia',
+                'O Diabo': 'tentação e dependência',
+                'A Torre': 'mudança súbita e libertação',
+                'A Estrela': 'esperança e inspiração',
+                'A Lua': 'ilusão e intuição',
+                'O Sol': 'sucesso e vitalidade',
+                'O Julgamento': 'renovação e perdão',
+                'O Mundo': 'conclusão e realização'
+            };
+            
+            return keywords[card.name] || 'energia especial';
+        }
+
+        function generateDetailedInterpretation(card) {
+            const details = [
+                'Esta energia influenciará suas decisões nos próximos dias.',
+                'Preste atenção aos sinais que o universo está enviando.',
+                'É um momento de reflexão sobre este aspecto de sua vida.',
+                'Considere como essa energia pode ser canalizada positivamente.',
+                'Esta carta sugere uma oportunidade de crescimento pessoal.'
+            ];
+            
+            return details[Math.floor(Math.random() * details.length)];
+        }
+
+        function generateCombinationAnalysis(cards) {
+            let analysis = '<div style="margin: 30px 0; padding: 20px; background: rgba(75, 0, 130, 0.1); border-radius: 10px;">';
+            analysis += '<h5>Análise de Combinações</h5>';
+            
+            const majorCount = cards.filter(card => tarotCards.majorArcana.includes(card)).length;
+            const minorCount = cards.length - majorCount;
+            
+            analysis += `<p><strong>Arcanos Maiores:</strong> ${majorCount} cartas (${((majorCount/cards.length)*100).toFixed(1)}%)</p>`;
+            analysis += `<p><strong>Arcanos Menores:</strong> ${minorCount} cartas (${((minorCount/cards.length)*100).toFixed(1)}%)</p>`;
+            
+            if (majorCount > minorCount) {
+                analysis += '<p>Predominância de Arcanos Maiores indica influências kármicas e lições importantes de vida.</p>';
+            } else {
+                analysis += '<p>Predominância de Arcanos Menores indica situações do dia a dia e escolhas pessoais.</p>';
+            }
+            
+            analysis += '</div>';
+            return analysis;
+        }
+
+        function generateElementalAnalysis(cards) {
+            let analysis = '<div style="margin: 30px 0; padding: 20px; background: rgba(0, 100, 0, 0.1); border-radius: 10px;">';
+            analysis += '<h5>Análise Elemental</h5>';
+            
+            const elements = { fire: 0, water: 0, air: 0, earth: 0 };
+            
+            cards.forEach(card => {
+                if (card.name.includes('Paus')) elements.fire++;
+                else if (card.name.includes('Copas')) elements.water++;
+                else if (card.name.includes('Espadas')) elements.air++;
+                else if (card.name.includes('Ouros')) elements.earth++;
+            });
+            
+            const total = Object.values(elements).reduce((a, b) => a + b, 0);
+            
+            if (total > 0) {
+                analysis += `<p><strong>Fogo:</strong> ${elements.fire} (${((elements.fire/total)*100).toFixed(1)}%) - Ação e paixão</p>`;
+                analysis += `<p><strong>Água:</strong> ${elements.water} (${((elements.water/total)*100).toFixed(1)}%) - Emoção e intuição</p>`;
+                analysis += `<p><strong>Ar:</strong> ${elements.air} (${((elements.air/total)*100).toFixed(1)}%) - Pensamento e comunicação</p>`;
+                analysis += `<p><strong>Terra:</strong> ${elements.earth} (${((elements.earth/total)*100).toFixed(1)}%) - Materialidade e praticidade</p>`;
+            }
+            
+            analysis += '</div>';
+            return analysis;
+        }
+
+        function generateAdvice(cards, title) {
+            const adviceList = [
+                'Mantenha-se aberto às mudanças que estão por vir.',
+                'Confie em sua intuição para tomar decisões importantes.',
+                'É um momento favorável para novos empreendimentos.',
+                'Pratique a paciência e a perseverança.',
+                'Busque o equilíbrio entre razão e emoção.',
+                'Valorize seus relacionamentos e conexões.',
+                'Invista em seu crescimento pessoal e espiritual.',
+                'Seja grato pelas oportunidades que surgem.',
+                'Mantenha uma atitude positiva diante dos desafios.',
+                'Escute sua voz interior e siga seu coração.'
+            ];
+            
+            let advice = '<div style="margin: 30px 0; padding: 20px; background: rgba(255, 215, 0, 0.1); border-radius: 10px;">';
+            advice += '<h5>Conselho Especial</h5>';
+            advice += `<p>${adviceList[Math.floor(Math.random() * adviceList.length)]}</p>`;
+            advice += '</div>';
+            
+            return advice;
+        }
+
+        // Export functionality
+        function exportReading() {
+            const readingContent = document.getElementById('readingText').innerText;
+            const timestamp = new Date().toLocaleString('pt-BR');
+            
+            const exportContent = `CONSULTA DE TAROT - ${timestamp}\n\n${readingContent}`;
+            
+            // Create download link
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(exportContent));
+            element.setAttribute('download', `tarot-consulta-${Date.now()}.txt`);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+            
+            showNotification('Consulta exportada com sucesso!', 'success');
+        }
+
+        // Statistics functions
+        function updateUserStats(readingType) {
+            userStats.totalReadings++;
+            
+            const reading = {
+                type: readingType,
+                timestamp: new Date().toISOString(),
+                date: new Date().toLocaleDateString('pt-BR')
+            };
+            
+            userStats.readingHistory.push(reading);
+            
+            // Save to Firebase if user is logged in
+            if (currentUser) {
+                db.collection('users').doc(currentUser.uid).update({
+                    'stats.totalReadings': firebase.firestore.FieldValue.increment(1),
+                    'stats.readingHistory': firebase.firestore.FieldValue.arrayUnion(reading)
+                });
+            }
+        }
+
+        function loadUserStats() {
+            if (!currentUser) return;
+            
+            db.collection('users').doc(currentUser.uid).get().then(doc => {
+                if (doc.exists) {
+                    const userData = doc.data();
+                    userStats = userData.stats || userStats;
+                    userPlan = userData.plan || 'free';
+                    updatePlanIndicator();
+                    updateStatsDisplay();
+                }
+            });
+        }
+
+        function updateStatsDisplay() {
+            if (userPlan === 'free') return;
+            
+            const statsContent = document.getElementById('statsContent');
+            const stats = userStats;
+            
+            statsContent.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                    <div style="background: rgba(138, 43, 226, 0.1); padding: 15px; border-radius: 10px;">
+                        <h4>Total de Consultas</h4>
+                        <p style="font-size: 2em; color: #FFD700;">${stats.totalReadings}</p>
+                    </div>
+                    <div style="background: rgba(75, 0, 130, 0.1); padding: 15px; border-radius: 10px;">
+                        <h4>Arcanos Maiores</h4>
+                        <p style="font-size: 1.5em; color: #E6E6FA;">${stats.majorArcana}</p>
+                    </div>
+                    <div style="background: rgba(0, 100, 0, 0.1); padding: 15px; border-radius: 10px;">
+                        <h4>Arcanos Menores</h4>
+                        <p style="font-size: 1.5em; color: #E6E6FA;">${stats.minorArcana}</p>
+                    </div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <h4>Últimas Consultas</h4>
+                    ${stats.readingHistory.slice(-5).reverse().map(reading => 
+                        `<p>${reading.date} - ${reading.type}</p>`
+                    ).join('')}
+                </div>
+            `;
+            
+            showElement('statsSection');
+        }
+
+        // Utility functions
+        function showElement(elementId) {
+            document.getElementById(elementId).style.display = 'block';
+        }
+
+        function hideElement(elementId) {
+            document.getElementById(elementId).style.display = 'none';
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+            notification.style.background = type === 'error' ? 'rgba(220, 53, 69, 0.9)' : 
+                                          type === 'success' ? 'rgba(40, 167, 69, 0.9)' : 
+                                          'rgba(255, 215, 0, 0.9)';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 4000);
+        }
+
+        function updatePlanIndicator() {
+            const planElement = document.getElementById('planType');
+            const planNames = {
+                'free': 'Gratuito',
+                'paid': 'Pago (R$ 9,90)',
+                'premium': 'Premium (R$ 29,90)'
+            };
+            planElement.textContent = planNames[userPlan] || 'Gratuito';
+        }
+
+        // Event listeners
+        document.getElementById('loginBtn').addEventListener('click', signInWithGoogle);
+        document.getElementById('logoutBtn').addEventListener('click', signOut);
+
+        // WhatsApp mask
+        document.getElementById('whatsapp').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length >= 11) {
+                value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+            } else if (value.length >= 7) {
+                value = value.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+            } else if (value.length >= 3) {
+                value = value.replace(/(\d{2})(\d{0,5})/, '($1) $2');
+            }
+            e.target.value = value;
+        });
+
+        // Prevent copying and printing for free users
+        document.addEventListener('keydown', function(e) {
+            if (userPlan === 'free') {
+                if ((e.ctrlKey && e.keyCode === 67) || // Ctrl+C
+                    (e.ctrlKey && e.keyCode === 80) || // Ctrl+P
+                    (e.ctrlKey && e.keyCode === 83) || // Ctrl+S
+                    (e.ctrlKey && e.keyCode === 65)) { // Ctrl+A
+                    e.preventDefault();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
