@@ -360,7 +360,10 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import moduloTarot from './modulo.js';
+        import './typebot.js';
+        
         // Base de dados completa do Tarot Waite
         const tarotDeck = {
             major: [
@@ -603,8 +606,15 @@
 
         function drawCards(count) {
             const allCards = getAllCards();
-            const shuffled = [...allCards].sort(() => Math.random() - 0.5);
+            const shuffled = moduloTarot.embaralharCartas(allCards);
             currentReading = shuffled.slice(0, count);
+            
+            // Validar a leitura
+            const validacao = moduloTarot.validarLeitura(currentReading);
+            if (!validacao.valido) {
+                alert(validacao.mensagem);
+                return;
+            }
             
             displayReading(currentReading, count);
             
@@ -695,19 +705,16 @@
         function analyzeCombinations(cards) {
             let analysis = "<div style='text-align: left;'>";
             
-            // Análise de elementos
-            const elements = cards.map(card => card.element);
-            const elementCount = {};
-            elements.forEach(el => elementCount[el] = (elementCount[el] || 0) + 1);
+            // Usar o módulo para análise de elementos
+            const relatorio = moduloTarot.gerarRelatorio(cards);
             
             analysis += "<h4 style='color: #ffd700;'>Análise Elemental:</h4>";
-            Object.entries(elementCount).forEach(([element, count]) => {
-                const percentage = (count / cards.length * 100).toFixed(1);
+            relatorio.dominancia.forEach(({elemento, quantidade, porcentagem}) => {
                 analysis += `
                     <div style="margin: 5px 0;">
-                        <strong>${element}:</strong> ${count} carta(s) (${percentage}%)
+                        <strong>${elemento}:</strong> ${quantidade} carta(s) (${porcentagem}%)
                         <div class="progress-bar" style="height: 10px; margin: 2px 0;">
-                            <div class="progress-fill" style="width: ${percentage}%"></div>
+                            <div class="progress-fill" style="width: ${porcentagem}%"></div>
                         </div>
                     </div>
                 `;
@@ -754,7 +761,7 @@
 
         function generateRandomCombination() {
             const allCards = getAllCards();
-            const shuffled = [...allCards].sort(() => Math.random() - 0.5);
+            const shuffled = moduloTarot.embaralharCartas(allCards);
             const combination = shuffled.slice(0, 2);
             
             displayCombination(combination);
@@ -807,6 +814,9 @@
             
             const [card1, card2] = cards;
             
+            // Verificar compatibilidade usando o módulo
+            const compatibilidade = moduloTarot.calcularCompatibilidade(card1, card2);
+            
             // Verificar combinações especiais pré-definidas
             if (typeof card1.id === 'number' && typeof card2.id === 'string') {
                 const majorId = card1.id.toString();
@@ -816,18 +826,12 @@
                 }
             }
             
-            // Análise por elementos
-            const elementKey = `${card1.element.toLowerCase()}_${card2.element.toLowerCase()}`;
-            const reverseElementKey = `${card2.element.toLowerCase()}_${card1.element.toLowerCase()}`;
+            // Análise por elementos usando o módulo
+            const interpretacao = moduloTarot.interpretarElementos([card1.element, card2.element]);
             
-            if (specialCombinations.elements[elementKey]) {
-                return specialCombinations.elements[elementKey];
-            } else if (specialCombinations.elements[reverseElementKey]) {
-                return specialCombinations.elements[reverseElementKey];
-            }
-            
-            // Análise genérica baseada nos significados
-            return `A combinação de ${card1.name} e ${card2.name} sugere uma síntese entre ${card1.meaning.toLowerCase()} e ${card2.meaning.toLowerCase()}. Esta combinação indica uma necessidade de equilibrar as energias de ${card1.element} e ${card2.element} para alcançar seus objetivos.`;
+            return `A combinação de ${card1.name} e ${card2.name} sugere uma síntese entre ${card1.meaning.toLowerCase()} e ${card2.meaning.toLowerCase()}. 
+                   Compatibilidade: ${compatibilidade}. 
+                   ${interpretacao}`;
         }
 
         function generateReport() {
