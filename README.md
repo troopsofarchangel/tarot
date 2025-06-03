@@ -1,2 +1,4 @@
-# tarot
-teste ferramentas
+# tarot 
+
+Tarot para sorte diária, para entretenimento.
+
