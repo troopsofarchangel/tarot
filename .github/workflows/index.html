@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -332,10 +331,11 @@
         <div id="reading" class="tab-content">
             <div class="reading-section">
                 <h2>🔮 Faça sua Leitura</h2>
-                <button class="btn" onclick="drawCards(1)">1 Carta - Resposta Rápida</button>
-                <button class="btn" onclick="drawCards(3)">3 Cartas - Passado/Presente/Futuro</button>
-                <button class="btn" onclick="drawCards(5)">5 Cartas - Cruz Celta Simples</button>
-                <button class="btn" onclick="drawCards(10)">10 Cartas - Cruz Celta Completa</button>
+                <button class="btn" data-count="1" onclick="drawCards(1)">1 Carta - Resposta Rápida</button>
+                <button class="btn" data-count="3" onclick="drawCards(3)">3 Cartas - Passado/Presente/Futuro</button>
+                <button class="btn" data-count="5" onclick="drawCards(5)">5 Cartas - Cruz Celta Simples</button>
+                <button class="btn" data-count="10" onclick="drawCards(10)">10 Cartas - Cruz Celta Completa</button>
+                <button class="btn leitura-dia" onclick="leituraDoDia()" style="background: linear-gradient(45deg, #ff6b6b, #ffd700);">🌟 Leitura do Dia</button>
                 <div class="reading-display" id="readingDisplay"></div>
             </div>
         </div>
@@ -500,37 +500,235 @@
         let currentReading = [];
         let readingHistory = [];
 
-        // Inicialização
-        document.addEventListener('DOMContentLoaded', function() {
-            displayAllCards();
-            generateReport();
-        });
-
-        function showTab(tabName) {
-            // Esconder todos os conteúdos
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            
-            // Remover classe active de todas as tabs
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            // Mostrar conteúdo selecionado
-            document.getElementById(tabName).classList.add('active');
-            
-            // Ativar tab selecionada
-            event.target.classList.add('active');
-        }
-
-        function getAllCards() {
+        // Funções globais
+        window.getAllCards = function() {
             let allCards = [...tarotDeck.major];
             Object.values(tarotDeck.minor).forEach(suit => {
                 allCards = allCards.concat(suit);
             });
             return allCards;
+        };
+
+        window.showTab = function(tabName) {
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        };
+
+        window.drawCards = function(count) {
+            const allCards = getAllCards();
+            const shuffled = moduloTarot.embaralharCartas(allCards);
+            currentReading = shuffled.slice(0, count);
+            
+            const validacao = moduloTarot.validarLeitura(currentReading);
+            if (!validacao.valido) {
+                alert(validacao.mensagem);
+                return;
+            }
+            
+            displayReading(currentReading, count);
+            
+            readingHistory.push({
+                date: new Date(),
+                cards: [...currentReading],
+                type: getReadingType(count)
+            });
+        };
+
+        window.leituraDoDia = function() {
+            const allCards = getAllCards();
+            const shuffled = moduloTarot.embaralharCartas(allCards);
+            const cartaDoDia = shuffled[0];
+            
+            const hoje = new Date();
+            const dataFormatada = hoje.toLocaleDateString('pt-BR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            const display = document.getElementById('readingDisplay');
+            display.innerHTML = `
+                <div class="drawn-card" style="animation-delay: 0.2s">
+                    <div style="font-size: 3em; margin-bottom: 10px;">${cartaDoDia.symbol}</div>
+                    <h3 style="color: #ffd700; margin-bottom: 10px;">${cartaDoDia.name}</h3>
+                    <div style="font-size: 0.9em; color: #ccc; margin-bottom: 15px;">
+                        <strong>Data:</strong> ${dataFormatada}
+                    </div>
+                    <div style="margin-bottom: 15px;">${cartaDoDia.meaning}</div>
+                    <div style="font-size: 0.9em; color: #ffd700;">
+                        <strong>Palavras-chave:</strong> ${cartaDoDia.keywords.join(', ')}
+                    </div>
+                    <div style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                        <h4 style="color: #ffd700; margin-bottom: 10px;">🌟 Mensagem do Dia</h4>
+                        <p>${getMensagemDoDia(cartaDoDia)}</p>
+                    </div>
+                </div>
+            `;
+
+            readingHistory.push({
+                date: hoje,
+                cards: [cartaDoDia],
+                type: "Leitura do Dia"
+            });
+        };
+
+        // Funções auxiliares
+        function getReadingType(count) {
+            switch(count) {
+                case 1: return "Resposta Rápida";
+                case 3: return "Passado/Presente/Futuro";
+                case 5: return "Cruz Celta Simples";
+                case 10: return "Cruz Celta Completa";
+                default: return "Leitura Personalizada";
+            }
         }
+
+        function getReadingPositions(count) {
+            switch(count) {
+                case 1:
+                    return ["Situação Atual"];
+                case 3:
+                    return ["Passado", "Presente", "Futuro"];
+                case 5:
+                    return ["Situação Atual", "Desafio", "Passado Distante", "Futuro Possível", "Resultado"];
+                case 10:
+                    return [
+                        "Situação Atual", "Desafio/Cruz", "Passado Distante", "Futuro Possível",
+                        "Coroa/Objetivo", "Base/Fundação", "Passado Recente", "Sua Abordagem",
+                        "Influências Externas", "Esperanças e Medos"
+                    ];
+                default:
+                    return Array(count).fill().map((_, i) => `Carta ${i + 1}`);
+            }
+        }
+
+        function getCardInterpretation(card, position) {
+            const interpretations = {
+                "Situação Atual": "Esta carta representa onde você está agora em sua jornada.",
+                "Passado": "Influências e eventos do passado que moldaram a situação atual.",
+                "Presente": "A energia e dinâmica predominante no momento.",
+                "Futuro": "Tendências e possibilidades que se aproximam.",
+                "Desafio": "Obstáculos ou lições importantes a serem enfrentados.",
+                "Objetivo": "O que você está buscando alcançar, consciente ou inconscientemente."
+            };
+            
+            return interpretations[position] || "Esta carta oferece orientação importante para sua situação.";
+        }
+
+        function displayReading(cards, count) {
+            const display = document.getElementById('readingDisplay');
+            const positions = getReadingPositions(count);
+            
+            display.innerHTML = cards.map((card, index) => `
+                <div class="drawn-card" style="animation-delay: ${index * 0.2}s">
+                    <div style="font-size: 3em; margin-bottom: 10px;">${card.symbol}</div>
+                    <h3 style="color: #ffd700; margin-bottom: 10px;">${card.name}</h3>
+                    <div style="font-size: 0.9em; color: #ccc; margin-bottom: 15px;">
+                        <strong>Posição:</strong> ${positions[index]}
+                    </div>
+                    <div style="margin-bottom: 15px;">${card.meaning}</div>
+                    <div style="font-size: 0.9em; color: #ffd700;">
+                        <strong>Palavras-chave:</strong> ${card.keywords.join(', ')}
+                    </div>
+                    <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                        ${getCardInterpretation(card, positions[index])}
+                    </div>
+                </div>
+            `).join('');
+
+            if (cards.length > 1) {
+                setTimeout(() => {
+                    display.innerHTML += `
+                        <div class="drawn-card" style="grid-column: 1 / -1; background: linear-gradient(145deg, #3a3a5a, #2a2a4a);">
+                            <h3 style="color: #ffd700; margin-bottom: 15px;">🔮 Análise de Combinações</h3>
+                            ${analyzeCombinations(cards)}
+                        </div>
+                    `;
+                }, cards.length * 200);
+            }
+        }
+
+        function getMensagemDoDia(carta) {
+            const mensagens = {
+                'O Louco': 'Um dia para abraçar novas aventuras e possibilidades. Permita-se ser espontâneo e seguir sua intuição.',
+                'O Mago': 'Dia ideal para manifestar seus desejos. Use seu poder pessoal e recursos disponíveis para criar mudanças.',
+                'A Sacerdotisa': 'Momento de ouvir sua voz interior. A intuição está forte hoje, confie em seus instintos.',
+                'A Imperatriz': 'Dia de nutrir seus projetos e relacionamentos. Foque na criatividade e abundância.',
+                'O Imperador': 'Momento de tomar o controle e estabelecer estruturas. Liderança e autoridade são suas forças hoje.',
+                'O Hierofante': 'Dia para seguir tradições e buscar orientação espiritual. A sabedoria convencional pode ajudar.',
+                'Os Amantes': 'Foque em relacionamentos e escolhas importantes. O amor e a harmonia estão em destaque.',
+                'A Carruagem': 'Dia de movimento e progresso. Mantenha o controle e siga em frente com determinação.',
+                'A Força': 'Use sua força interior com compaixão. A coragem e a paciência são suas aliadas hoje.',
+                'O Eremita': 'Momento de introspecção e busca interior. A solidão pode trazer grandes insights.',
+                'A Roda da Fortuna': 'Dia de mudanças e ciclos. Aproveite as oportunidades que surgirem.',
+                'A Justiça': 'Foque em equilíbrio e decisões justas. A verdade e a equidade são importantes hoje.',
+                'O Enforcado': 'Dia para ver as coisas de uma nova perspectiva. Às vezes, é necessário fazer uma pausa.',
+                'A Morte': 'Momento de transformação e renovação. Deixe ir o que não serve mais.',
+                'A Temperança': 'Busque equilíbrio e moderação. A harmonia está em encontrar o meio termo.',
+                'O Diabo': 'Cuidado com tentações e vícios. Esteja atento ao que realmente te prende.',
+                'A Torre': 'Mudanças súbitas podem ocorrer. Use-as como oportunidade de crescimento.',
+                'A Estrela': 'Dia de esperança e inspiração. Mantenha a fé em seus sonhos.',
+                'A Lua': 'Intuição e sonhos estão fortes. Cuidado com ilusões e medos.',
+                'O Sol': 'Dia de alegria e sucesso. Aproveite a energia positiva.',
+                'O Julgamento': 'Momento de reflexão e despertar. Escute seu chamado interior.',
+                'O Mundo': 'Dia de realização e completude. Você está no caminho certo.'
+            };
+
+            return mensagens[carta.name] || `Hoje é um dia especial para refletir sobre ${carta.meaning.toLowerCase()}. Use esta energia para seu crescimento pessoal.`;
+        }
+
+        function analyzeCombinations(cards) {
+            let analysis = "<div style='text-align: left;'>";
+            
+            const relatorio = moduloTarot.gerarRelatorio(cards);
+            
+            analysis += "<h4 style='color: #ffd700;'>Análise Elemental:</h4>";
+            relatorio.dominancia.forEach(({elemento, quantidade, porcentagem}) => {
+                analysis += `
+                    <div style="margin: 5px 0;">
+                        <strong>${elemento}:</strong> ${quantidade} carta(s) (${porcentagem}%)
+                        <div class="progress-bar" style="height: 10px; margin: 2px 0;">
+                            <div class="progress-fill" style="width: ${porcentagem}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            analysis += "<h4 style='color: #ffd700; margin-top: 20px;'>Combinações Especiais:</h4>";
+            
+            const majorCards = cards.filter(card => typeof card.id === 'number');
+            const minorCards = cards.filter(card => typeof card.id === 'string');
+            
+            if (majorCards.length > 0 && minorCards.length > 0) {
+                analysis += "<div style='background: rgba(255,215,0,0.1); padding: 10px; border-radius: 5px; margin: 5px 0;'>";
+                analysis += "🌟 <strong>Combinação Maior + Menor:</strong> Esta leitura mostra tanto influências espirituais/universais quanto aspectos práticos do dia a dia.";
+                analysis += "</div>";
+            }
+
+            if (majorCards.length >= 3) {
+                analysis += "<div style='background: rgba(255,215,0,0.1); padding: 10px; border-radius: 5px; margin: 5px 0;'>";
+                analysis += "⚡ <strong>Forte Presença de Arcanos Maiores:</strong> Esta situação envolve lições de vida importantes e forças maiores em ação.";
+                analysis += "</div>";
+            }
+
+            analysis += "</div>";
+            return analysis;
+        }
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            displayAllCards();
+            generateReport();
+        });
 
         function displayAllCards() {
             const grid = document.getElementById('cardGrid');
@@ -548,7 +746,25 @@
             `).join('');
         }
 
-        function filterCards() {
+        window.showCardDetails = function(cardId) {
+            const allCards = getAllCards();
+            const card = allCards.find(c => (c.id || c.name) === cardId);
+            
+            if (!card) return;
+            
+            alert(`
+🔮 ${card.name}
+
+Elemento: ${card.element}
+Significado: ${card.meaning}
+
+Palavras-chave: ${card.keywords.join(', ')}
+
+Esta carta representa energias relacionadas ao elemento ${card.element} e traz lições sobre ${card.meaning.toLowerCase()}.
+            `);
+        };
+
+        window.filterCards = function() {
             const arcanaFilter = document.getElementById('arcanaFilter').value;
             const sortFilter = document.getElementById('sortFilter').value;
             let filteredCards = [];
@@ -581,7 +797,6 @@
                     filteredCards = getAllCards();
             }
 
-            // Aplicar ordenação
             switch(sortFilter) {
                 case 'name':
                     filteredCards.sort((a, b) => a.name.localeCompare(b.name));
@@ -589,7 +804,6 @@
                 case 'element':
                     filteredCards.sort((a, b) => a.element.localeCompare(b.element));
                     break;
-                // 'order' mantém a ordem original
             }
 
             const grid = document.getElementById('cardGrid');
@@ -603,237 +817,7 @@
                     </div>
                 </div>
             `).join('');
-        }
-
-        function drawCards(count) {
-            const allCards = getAllCards();
-            const shuffled = moduloTarot.embaralharCartas(allCards);
-            currentReading = shuffled.slice(0, count);
-            
-            // Validar a leitura
-            const validacao = moduloTarot.validarLeitura(currentReading);
-            if (!validacao.valido) {
-                alert(validacao.mensagem);
-                return;
-            }
-            
-            displayReading(currentReading, count);
-            
-            // Adicionar ao histórico
-            readingHistory.push({
-                date: new Date(),
-                cards: [...currentReading],
-                type: getReadingType(count)
-            });
-        }
-
-        function getReadingType(count) {
-            switch(count) {
-                case 1: return "Resposta Rápida";
-                case 3: return "Passado/Presente/Futuro";
-                case 5: return "Cruz Celta Simples";
-                case 10: return "Cruz Celta Completa";
-                default: return "Leitura Personalizada";
-            }
-        }
-
-        function displayReading(cards, count) {
-            const display = document.getElementById('readingDisplay');
-            const positions = getReadingPositions(count);
-            
-            display.innerHTML = cards.map((card, index) => `
-                <div class="drawn-card" style="animation-delay: ${index * 0.2}s">
-                    <div style="font-size: 3em; margin-bottom: 10px;">${card.symbol}</div>
-                    <h3 style="color: #ffd700; margin-bottom: 10px;">${card.name}</h3>
-                    <div style="font-size: 0.9em; color: #ccc; margin-bottom: 15px;">
-                        <strong>Posição:</strong> ${positions[index]}
-                    </div>
-                    <div style="margin-bottom: 15px;">${card.meaning}</div>
-                    <div style="font-size: 0.9em; color: #ffd700;">
-                        <strong>Palavras-chave:</strong> ${card.keywords.join(', ')}
-                    </div>
-                    <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px;">
-                        ${getCardInterpretation(card, positions[index])}
-                    </div>
-                </div>
-            `).join('');
-
-            // Análise de combinações se houver múltiplas cartas
-            if (cards.length > 1) {
-                setTimeout(() => {
-                    display.innerHTML += `
-                        <div class="drawn-card" style="grid-column: 1 / -1; background: linear-gradient(145deg, #3a3a5a, #2a2a4a);">
-                            <h3 style="color: #ffd700; margin-bottom: 15px;">🔮 Análise de Combinações</h3>
-                            ${analyzeCombinations(cards)}
-                        </div>
-                    `;
-                }, cards.length * 200);
-            }
-        }
-
-        function getReadingPositions(count) {
-            switch(count) {
-                case 1:
-                    return ["Situação Atual"];
-                case 3:
-                    return ["Passado", "Presente", "Futuro"];
-                case 5:
-                    return ["Situação Atual", "Desafio", "Passado Distante", "Futuro Possível", "Resultado"];
-                case 10:
-                    return [
-                        "Situação Atual", "Desafio/Cruz", "Passado Distante", "Futuro Possível",
-                        "Coroa/Objetivo", "Base/Fundação", "Passado Recente", "Sua Abordagem",
-                        "Influências Externas", "Esperanças e Medos"
-                    ];
-                default:
-                    return cards.map((_, i) => `Carta ${i + 1}`);
-            }
-        }
-
-        function getCardInterpretation(card, position) {
-            const interpretations = {
-                "Situação Atual": "Esta carta representa onde você está agora em sua jornada.",
-                "Passado": "Influências e eventos do passado que moldaram a situação atual.",
-                "Presente": "A energia e dinâmica predominante no momento.",
-                "Futuro": "Tendências e possibilidades que se aproximam.",
-                "Desafio": "Obstáculos ou lições importantes a serem enfrentados.",
-                "Objetivo": "O que você está buscando alcançar, consciente ou inconscientemente."
-            };
-            
-            return interpretations[position] || "Esta carta oferece orientação importante para sua situação.";
-        }
-
-        function analyzeCombinations(cards) {
-            let analysis = "<div style='text-align: left;'>";
-            
-            // Usar o módulo para análise de elementos
-            const relatorio = moduloTarot.gerarRelatorio(cards);
-            
-            analysis += "<h4 style='color: #ffd700;'>Análise Elemental:</h4>";
-            relatorio.dominancia.forEach(({elemento, quantidade, porcentagem}) => {
-                analysis += `
-                    <div style="margin: 5px 0;">
-                        <strong>${elemento}:</strong> ${quantidade} carta(s) (${porcentagem}%)
-                        <div class="progress-bar" style="height: 10px; margin: 2px 0;">
-                            <div class="progress-fill" style="width: ${porcentagem}%"></div>
-                        </div>
-                    </div>
-                `;
-            });
-
-            // Verificar combinações especiais
-            analysis += "<h4 style='color: #ffd700; margin-top: 20px;'>Combinações Especiais:</h4>";
-            
-            const majorCards = cards.filter(card => typeof card.id === 'number');
-            const minorCards = cards.filter(card => typeof card.id === 'string');
-            
-            if (majorCards.length > 0 && minorCards.length > 0) {
-                analysis += "<div style='background: rgba(255,215,0,0.1); padding: 10px; border-radius: 5px; margin: 5px 0;'>";
-                analysis += "🌟 <strong>Combinação Maior + Menor:</strong> Esta leitura mostra tanto influências espirituais/universais quanto aspectos práticos do dia a dia.";
-                analysis += "</div>";
-            }
-
-            if (majorCards.length >= 3) {
-                analysis += "<div style='background: rgba(255,215,0,0.1); padding: 10px; border-radius: 5px; margin: 5px 0;'>";
-                analysis += "⚡ <strong>Forte Presença de Arcanos Maiores:</strong> Esta situação envolve lições de vida importantes e forças maiores em ação.";
-                analysis += "</div>";
-            }
-
-            // Análise de polaridade (cartas positivas vs desafiadoras)
-            const challengingCards = ["A Torre", "A Morte", "O Diabo", "Cinco de Copas", "Três de Espadas", "Cinco de Espadas", "Sete de Espadas", "Nove de Espadas", "Dez de Espadas"];
-            const positiveCards = ["O Sol", "A Estrela", "O Mundo", "Nove de Copas", "Dez de Copas", "Seis de Paus", "Ás de Copas", "Ás de Ouros"];
-            
-            const challengingCount = cards.filter(card => challengingCards.includes(card.name)).length;
-            const positiveCount = cards.filter(card => positiveCards.includes(card.name)).length;
-            
-            if (challengingCount > positiveCount) {
-                analysis += "<div style='background: rgba(255,100,100,0.1); padding: 10px; border-radius: 5px; margin: 5px 0;'>";
-                analysis += "⚠️ <strong>Período de Desafios:</strong> Esta leitura indica um período de crescimento através de desafios.";
-                analysis += "</div>";
-            } else if (positiveCount > challengingCount) {
-                analysis += "<div style='background: rgba(100,255,100,0.1); padding: 10px; border-radius: 5px; margin: 5px 0;'>";
-                analysis += "✨ <strong>Energia Positiva:</strong> As cartas indicam um período favorável e de crescimento.";
-                analysis += "</div>";
-            }
-
-            analysis += "</div>";
-            return analysis;
-        }
-
-        function generateRandomCombination() {
-            const allCards = getAllCards();
-            const shuffled = moduloTarot.embaralharCartas(allCards);
-            const combination = shuffled.slice(0, 2);
-            
-            displayCombination(combination);
-        }
-
-        function analyzeMajorMinorCombination() {
-            const majorCard = tarotDeck.major[Math.floor(Math.random() * tarotDeck.major.length)];
-            const minorSuits = ['cups', 'wands', 'swords', 'pentacles'];
-            const randomSuit = minorSuits[Math.floor(Math.random() * minorSuits.length)];
-            const minorCard = tarotDeck.minor[randomSuit][Math.floor(Math.random() * tarotDeck.minor[randomSuit].length)];
-            
-            displayCombination([majorCard, minorCard]);
-        }
-
-        function displayCombination(cards) {
-            const grid = document.getElementById('combinationsGrid');
-            
-            grid.innerHTML = `
-                <div class="combination-card">
-                    <h3 style="color: #ffd700; margin-bottom: 15px;">🔮 Combinação Gerada</h3>
-                    <div style="display: flex; justify-content: space-around; margin-bottom: 20px;">
-                        ${cards.map(card => `
-                            <div style="text-align: center;">
-                                <div style="font-size: 3em;">${card.symbol}</div>
-                                <div style="color: #ffd700; font-weight: bold;">${card.name}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
-                        <h4 style="color: #ffd700;">Significado da Combinação:</h4>
-                        ${getCombinationMeaning(cards)}
-                    </div>
-                </div>
-                
-                <div class="combination-card">
-                    <h3 style="color: #ffd700; margin-bottom: 15px;">⚡ Análise Detalhada</h3>
-                    ${cards.map((card, index) => `
-                        <div style="background: rgba(255,255,255,0.05); padding: 10px; margin: 10px 0; border-radius: 8px;">
-                            <strong>${card.name}:</strong><br>
-                            ${card.meaning}<br>
-                            <small style="color: #ccc;">Palavras-chave: ${card.keywords.join(', ')}</small>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }
-
-        function getCombinationMeaning(cards) {
-            if (cards.length !== 2) return "Análise disponível apenas para combinações de 2 cartas.";
-            
-            const [card1, card2] = cards;
-            
-            // Verificar compatibilidade usando o módulo
-            const compatibilidade = moduloTarot.calcularCompatibilidade(card1, card2);
-            
-            // Verificar combinações especiais pré-definidas
-            if (typeof card1.id === 'number' && typeof card2.id === 'string') {
-                const majorId = card1.id.toString();
-                const minorId = card2.id;
-                if (specialCombinations.majorMinor[majorId] && specialCombinations.majorMinor[majorId][minorId]) {
-                    return specialCombinations.majorMinor[majorId][minorId];
-                }
-            }
-            
-            // Análise por elementos usando o módulo
-            const interpretacao = moduloTarot.interpretarElementos([card1.element, card2.element]);
-            
-            return `A combinação de ${card1.name} e ${card2.name} sugere uma síntese entre ${card1.meaning.toLowerCase()} e ${card2.meaning.toLowerCase()}. 
-                   Compatibilidade: ${compatibilidade}. 
-                   ${interpretacao}`;
-        }
+        };
 
         function generateReport() {
             const reportContent = document.getElementById('reportContent');
@@ -954,56 +938,80 @@
             `;
         }
 
-        function showCardDetails(cardId) {
+        function generateRandomCombination() {
             const allCards = getAllCards();
-            const card = allCards.find(c => (c.id || c.name) === cardId);
+            const shuffled = moduloTarot.embaralharCartas(allCards);
+            const combination = shuffled.slice(0, 2);
             
-            if (!card) return;
-            
-            alert(`
-🔮 ${card.name}
-
-Elemento: ${card.element}
-Significado: ${card.meaning}
-
-Palavras-chave: ${card.keywords.join(', ')}
-
-Esta carta representa energias relacionadas ao elemento ${card.element} e traz lições sobre ${card.meaning.toLowerCase()}.
-            `);
+            displayCombination(combination);
         }
 
-        // Função para exportar relatório (simulado)
-        function exportReport() {
-            const reportData = {
-                timestamp: new Date().toISOString(),
-                totalCards: getAllCards().length,
-                readings: readingHistory,
-                statistics: "Relatório completo do Tarot Waite"
-            };
+        function analyzeMajorMinorCombination() {
+            const majorCard = tarotDeck.major[Math.floor(Math.random() * tarotDeck.major.length)];
+            const minorSuits = ['cups', 'wands', 'swords', 'pentacles'];
+            const randomSuit = minorSuits[Math.floor(Math.random() * minorSuits.length)];
+            const minorCard = tarotDeck.minor[randomSuit][Math.floor(Math.random() * tarotDeck.minor[randomSuit].length)];
             
-            console.log("Relatório exportado:", reportData);
-            alert("Relatório exportado com sucesso! (Verifique o console para detalhes)");
+            displayCombination([majorCard, minorCard]);
         }
 
-        // Atalhos de teclado
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey || e.metaKey) {
-                switch(e.key) {
-                    case '1':
-                        e.preventDefault();
-                        drawCards(1);
-                        break;
-                    case '3':
-                        e.preventDefault();
-                        drawCards(3);
-                        break;
-                    case 'r':
-                        e.preventDefault();
-                        generateRandomCombination();
-                        break;
+        function displayCombination(cards) {
+            const grid = document.getElementById('combinationsGrid');
+            
+            grid.innerHTML = `
+                <div class="combination-card">
+                    <h3 style="color: #ffd700; margin-bottom: 15px;">🔮 Combinação Gerada</h3>
+                    <div style="display: flex; justify-content: space-around; margin-bottom: 20px;">
+                        ${cards.map(card => `
+                            <div style="text-align: center;">
+                                <div style="font-size: 3em;">${card.symbol}</div>
+                                <div style="color: #ffd700; font-weight: bold;">${card.name}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                        <h4 style="color: #ffd700;">Significado da Combinação:</h4>
+                        ${getCombinationMeaning(cards)}
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <h3 style="color: #ffd700; margin-bottom: 15px;">⚡ Análise Detalhada</h3>
+                    ${cards.map((card, index) => `
+                        <div style="background: rgba(255,255,255,0.05); padding: 10px; margin: 10px 0; border-radius: 8px;">
+                            <strong>${card.name}:</strong><br>
+                            ${card.meaning}<br>
+                            <small style="color: #ccc;">Palavras-chave: ${card.keywords.join(', ')}</small>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function getCombinationMeaning(cards) {
+            if (cards.length !== 2) return "Análise disponível apenas para combinações de 2 cartas.";
+            
+            const [card1, card2] = cards;
+            
+            // Verificar compatibilidade usando o módulo
+            const compatibilidade = moduloTarot.calcularCompatibilidade(card1, card2);
+            
+            // Verificar combinações especiais pré-definidas
+            if (typeof card1.id === 'number' && typeof card2.id === 'string') {
+                const majorId = card1.id.toString();
+                const minorId = card2.id;
+                if (specialCombinations.majorMinor[majorId] && specialCombinations.majorMinor[majorId][minorId]) {
+                    return specialCombinations.majorMinor[majorId][minorId];
                 }
             }
-        });
+            
+            // Análise por elementos usando o módulo
+            const interpretacao = moduloTarot.interpretarElementos([card1.element, card2.element]);
+            
+            return `A combinação de ${card1.name} e ${card2.name} sugere uma síntese entre ${card1.meaning.toLowerCase()} e ${card2.meaning.toLowerCase()}. 
+                   Compatibilidade: ${compatibilidade}. 
+                   ${interpretacao}`;
+        }
     </script>
 <!-- Code injected by live-server -->
 <script>
